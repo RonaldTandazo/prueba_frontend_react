@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios';
+import FormService from './services/formService';
 import './App.css'
 
 function App() {
@@ -9,11 +9,24 @@ function App() {
   const [dropdownData, setDropdownData] = useState([]); // state que almacena las opciones
   const [selectedOption, setSelectedOption] = useState(''); // state que almacena la opcion seleccionada
   const [formErrors, setFormErrors] = useState({});
+  const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    // Modifica el codigo para traer las opciones del proyecto de flask usando axios
-    setDropdownData(['Option 1', 'Option 2', 'Option 3']);
+    const getOptions = async () => {
+      try {
+        const data = await FormService.getOptions();
+        setDropdownData(data.data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false)
+      }
+    };
+
+    getOptions()
   }, []);
+
+  if(loading) return <h1>Loading...</h1>
 
   // Función para manejar el submit del formulario
   const handleSubmit = (e) => {
@@ -29,10 +42,33 @@ function App() {
 
     // Si no hay errores, procesamos el formulario
     if (Object.keys(errors).length === 0) {
-      console.log('Form submitted successfully');
-      console.log({ name, email });
+      setLoading(true)
+      const data = {name, email, option: selectedOption}
+      save(data)
     }
   };
+
+  const save = async (data) => {
+    try{
+      const save = await FormService.storeForm(data)
+      alert(save.message)
+    }catch(err){
+      alert(err.message || "Error while saving data")
+    }finally{
+      resetFields()
+      setLoading(false)
+    }
+  }
+
+  const resetFields = () => {
+    setName('')
+    setEmail('')
+    setSelectedOption('')
+  }
+
+  const handleSelect = (e) => {
+    setSelectedOption(e.target.value)
+  }
 
   return (
     <div className="App">
@@ -67,6 +103,18 @@ function App() {
         {/* Dropdown */}
         <div style={{ marginBottom: '10px' }}>
           {/* Aqui agrega tu codigo del select usando el tag <select></select>, no valides formErrors  */}
+          <p>Select an Option</p>
+          <select
+            id='dropdown'
+            value={selectedOption}
+            onChange={handleSelect}
+            style={{ width: '100%', padding: '8px' }}
+          >
+            <option value='' disabled>Select an Option</option>
+            {dropdownData && dropdownData.map((item, index) => (
+              <option value={item} key={index}>{item}</option>
+            ))}
+          </select>
         </div>
 
         {/* Submit button */}
